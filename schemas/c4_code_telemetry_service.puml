@@ -1,0 +1,53 @@
+@startuml
+title Code Diagram - Telemetry Service / Service Layer
+
+class TelemetryService {
+    - repo: TelemetryRepository
+    - producer: EventProducer
+    - tempClient: TemperatureClient
+    + GetTelemetry(sensorID: int): Telemetry
+    + GetByLocation(location: string): Telemetry
+    + CollectTemperature(sensorID: int): Telemetry
+    + OnDeviceCreated(event: Event): void
+    + OnDeviceDeleted(event: Event): void
+}
+
+class Telemetry {
+    + id: int
+    + sensorID: int
+    + value: float64
+    + unit: string
+    + status: string
+    + location: string
+    + timestamp: datetime
+}
+
+interface TelemetryRepository {
+    + Save(telemetry: Telemetry): void
+    + FindBySensorID(sensorID: int): Telemetry
+    + FindByLocation(location: string): []Telemetry
+    + Delete(sensorID: int): void
+}
+
+interface TemperatureClient {
+    + GetTemperature(location: string): TemperatureResponse
+    + GetTemperatureByID(sensorID: string): TemperatureResponse
+}
+
+interface EventProducer {
+    + Publish(event: Event): void
+}
+
+class Event {
+    + type: string
+    + timestamp: datetime
+    + payload: map
+}
+
+TelemetryService --> TelemetryRepository : хранит данные
+TelemetryService --> TemperatureClient : запрашивает температуру
+TelemetryService --> EventProducer : публикует события
+TelemetryRepository ..> Telemetry : возвращает
+EventProducer ..> Event : отправляет
+
+@enduml

@@ -1,0 +1,33 @@
+@startuml
+title ER Diagram - Warmhouse
+
+entity "Location" as loc {
+    * id : int <<PK>>
+    --
+    * name : varchar
+}
+
+entity "Device" as dev {
+    * id : int <<PK>>
+    --
+    * name : varchar
+    * type : varchar
+    * unit : varchar
+    * status : varchar
+    * location_id : int <<FK>>
+    * created_at : timestamp
+    * updated_at : timestamp
+}
+
+entity "TelemetryRecord" as tel {
+    * id : int <<PK>>
+    --
+    * sensor_id : int
+    * value : float
+    * unit : varchar
+    * created_at : timestamp
+}
+
+loc ||--o{ dev : "содержит"
+
+@enduml

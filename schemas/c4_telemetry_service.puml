@@ -1,0 +1,32 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+title Component Diagram - Telemetry Service
+
+Container_Boundary(api, "Telemetry Service") {
+    Component(handler, "Handler", "GRPC", "Обработка GRPC")
+    Component(service, "Service", "Go", "Бизнес-логика")
+    Component(repo, "Repository", "Go", "Доступ к данным")
+    Component(client, "HTTP Client", "Go", "Вызов внешних API")
+    Component(producer, "Producer", "Go", "Produce events")
+    Component(listener, "Listener", "Go", "Consume events")
+}
+
+Container(gateway, "API Gateway", "Golang", "")
+
+ContainerDb(db, "Database", "PostgreSQL", "")
+System_Ext(ext, "External Temperature API", "")
+ContainerQueue(broker, "Message Broker", "RabbitMQ", "Асинхронный обмен")
+
+Rel(gateway, handler, "GRPC")
+Rel(handler, service, "Вызывает")
+Rel(service, client, "Вызывает")
+Rel(service, repo, "Читает/пишет")
+Rel(service, producer, "Call")
+Rel(producer, broker, "Publish telemetry.updated/no_data")
+Rel(broker, listener, "Consume device.created/deleted")
+Rel(listener, service, "Process logic")
+Rel(repo, db, "SQL")
+Rel(client, ext, "HTTPS")
+
+@enduml

@@ -1,0 +1,28 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+title Component Diagram - Device Service
+
+Container_Boundary(api, "Device Service") {
+    Component(handler, "Handler", "GRPC", "Обработка GRPC")
+    Component(service, "Service", "Go", "Бизнес-логика")
+    Component(producer, "Producer", "Go", "Produce events")
+    Component(listener, "Listener", "Go", "Consume events")
+    Component(repo, "Repository", "Go", "Доступ к данным")
+}
+
+Container(gateway, "API Gateway", "Golang", "")
+
+ContainerDb(db, "Database", "PostgreSQL", "")
+ContainerQueue(broker, "Message Broker", "RabbitMQ", "Асинхронный обмен")
+
+Rel(gateway, handler, "GRPC")
+Rel(handler, service, "Вызывает")
+Rel(service, repo, "Читает/пишет")
+Rel(service, producer, "Call")
+Rel(producer, broker, "Publish device.created/deleted")
+Rel(broker, listener, "Consume telemetry.updated/no_data")
+Rel(listener, service, "Process logic")
+Rel(repo, db, "SQL")
+
+@enduml
