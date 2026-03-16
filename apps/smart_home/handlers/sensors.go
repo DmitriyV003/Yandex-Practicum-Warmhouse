@@ -14,17 +14,15 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// SensorHandler handles sensor-related requests
-type SensorHandler struct {
+type DeviceHandler struct {
 	DB                 *db.DB
 	TemperatureService *services.TemperatureService
 	DeviceClient       *services.DeviceClient
 	TelemetryClient    *services.TelemetryClient
 }
 
-// NewSensorHandler creates a new SensorHandler
-func NewSensorHandler(db *db.DB, temperatureService *services.TemperatureService, deviceClient *services.DeviceClient, telemetryClient *services.TelemetryClient) *SensorHandler {
-	return &SensorHandler{
+func NewSensorHandler(db *db.DB, temperatureService *services.TemperatureService, deviceClient *services.DeviceClient, telemetryClient *services.TelemetryClient) *DeviceHandler {
+	return &DeviceHandler{
 		DB:                 db,
 		TemperatureService: temperatureService,
 		DeviceClient:       deviceClient,
@@ -32,125 +30,128 @@ func NewSensorHandler(db *db.DB, temperatureService *services.TemperatureService
 	}
 }
 
-// RegisterRoutes registers the sensor routes
-func (h *SensorHandler) RegisterRoutes(router *gin.RouterGroup) {
-	sensors := router.Group("/sensors")
+func (h *DeviceHandler) RegisterRoutes(router *gin.RouterGroup) {
+	devices := router.Group("/devices")
 	{
-		sensors.GET("", h.GetSensors)
-		sensors.GET("/:id", h.GetSensorByID)
-		sensors.POST("", h.CreateSensor)
-		sensors.PUT("/:id", h.UpdateSensor)
-		sensors.DELETE("/:id", h.DeleteSensor)
-		sensors.PATCH("/:id/value", h.UpdateSensorValue)
-		sensors.GET("/temperature/:location", h.GetTemperatureByLocation)
+		devices.GET("", h.GetDevices)
+		devices.GET("/:id", h.GetDeviceByID)
+		devices.POST("", h.CreateDevice)
+		devices.PUT("/:id", h.UpdateDevice)
+		devices.DELETE("/:id", h.DeleteDevice)
+		devices.GET("/temperature/:room", h.GetTemperatureByRoom)
+	}
+
+	rooms := router.Group("/rooms")
+	{
+		rooms.GET("", h.GetRooms)
+		rooms.POST("", h.CreateRoom)
+	}
+
+	houses := router.Group("/houses")
+	{
+		houses.GET("", h.GetHouses)
+		houses.POST("", h.CreateHouse)
+	}
+
+	users := router.Group("/users")
+	{
+		users.POST("", h.CreateUser)
 	}
 }
 
-// GetSensors godoc
-// @Summary      Получить все датчики
-// @Description  Возвращает список всех датчиков с актуальными данными температуры
-// @Tags         sensors
+// GetDevices godoc
+// @Summary      Получить все устройства
+// @Description  Возвращает список всех устройств с актуальными данными температуры
+// @Tags         devices
 // @Produce      json
-// @Success      200 {array} models.Sensor
+// @Success      200 {array} models.Device
 // @Failure      500 {object} map[string]string
-// @Router       /sensors [get]
-func (h *SensorHandler) GetSensors(c *gin.Context) {
-	sensors, err := h.DB.GetSensors(context.Background())
+// @Router       /devices [get]
+func (h *DeviceHandler) GetDevices(c *gin.Context) {
+	devices, err := h.DB.GetDevices(context.Background())
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	// Update temperature sensors with real-time data
-	for i, sensor := range sensors {
-		if sensor.Type == models.Temperature {
-			// Try telemetry-service first (microservice), fall back to direct temperature API
+	for i, device := range devices {
+		if device.Type == models.Temperature {
 			if h.TelemetryClient != nil {
-				resp, err := h.TelemetryClient.CollectFromSensor(context.Background(), int32(sensor.ID), sensor.Location)
+				_, err := h.TelemetryClient.CollectFromSensor(context.Background(), int32(device.ID), device.RoomName)
 				if err == nil {
-					sensors[i].Value = resp.Value
-					sensors[i].Status = "active"
-					sensors[i].LastUpdated = resp.CreatedAt.AsTime()
-					log.Printf("Updated sensor %d via telemetry-service", sensor.ID)
+					devices[i].Status = "active"
+					log.Printf("Updated device %d via telemetry-service", device.ID)
 					continue
 				}
-				log.Printf("telemetry-service failed for sensor %d, falling back: %v", sensor.ID, err)
+				log.Printf("telemetry-service failed for device %d, falling back: %v", device.ID, err)
 			}
-			// Fallback to direct temperature API
-			tempData, err := h.TemperatureService.GetTemperatureByID(fmt.Sprintf("%d", sensor.ID))
+			tempData, err := h.TemperatureService.GetTemperatureByID(fmt.Sprintf("%d", device.ID))
 			if err == nil {
-				sensors[i].Value = tempData.Value
-				sensors[i].Status = tempData.Status
-				sensors[i].LastUpdated = tempData.Timestamp
-				log.Printf("Updated sensor %d from temperature API (fallback)", sensor.ID)
+				devices[i].Status = tempData.Status
+				log.Printf("Updated device %d from temperature API (fallback)", device.ID)
 			} else {
-				log.Printf("Failed to fetch temperature for sensor %d: %v", sensor.ID, err)
+				log.Printf("Failed to fetch temperature for device %d: %v", device.ID, err)
 			}
 		}
 	}
 
-	c.JSON(http.StatusOK, sensors)
+	c.JSON(http.StatusOK, devices)
 }
 
-// GetSensorByID godoc
-// @Summary      Получить датчик по ID
-// @Description  Возвращает датчик с актуальными данными температуры
-// @Tags         sensors
+// GetDeviceByID godoc
+// @Summary      Получить устройство по ID
+// @Description  Возвращает устройство с актуальными данными
+// @Tags         devices
 // @Produce      json
-// @Param        id path int true "ID датчика"
-// @Success      200 {object} models.Sensor
+// @Param        id path int true "ID устройства"
+// @Success      200 {object} models.Device
 // @Failure      400 {object} map[string]string
 // @Failure      404 {object} map[string]string
-// @Router       /sensors/{id} [get]
-func (h *SensorHandler) GetSensorByID(c *gin.Context) {
+// @Router       /devices/{id} [get]
+func (h *DeviceHandler) GetDeviceByID(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid sensor ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid device ID"})
 		return
 	}
 
-	sensor, err := h.DB.GetSensorByID(context.Background(), id)
+	device, err := h.DB.GetDeviceByID(context.Background(), id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Sensor not found"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "Device not found"})
 		return
 	}
 
-	// If this is a temperature sensor, fetch real-time data from the temperature API
-	if sensor.Type == models.Temperature {
-		tempData, err := h.TemperatureService.GetTemperatureByID(fmt.Sprintf("%d", sensor.ID))
+	if device.Type == models.Temperature {
+		tempData, err := h.TemperatureService.GetTemperatureByID(fmt.Sprintf("%d", device.ID))
 		if err == nil {
-			// Update sensor with real-time data
-			sensor.Value = tempData.Value
-			sensor.Status = tempData.Status
-			sensor.LastUpdated = tempData.Timestamp
-			log.Printf("Updated temperature data for sensor %d from external API", sensor.ID)
+			device.Status = tempData.Status
+			log.Printf("Updated temperature data for device %d from external API", device.ID)
 		} else {
-			log.Printf("Failed to fetch temperature data for sensor %d: %v", sensor.ID, err)
+			log.Printf("Failed to fetch temperature data for device %d: %v", device.ID, err)
 		}
 	}
 
-	c.JSON(http.StatusOK, sensor)
+	c.JSON(http.StatusOK, device)
 }
 
-// GetTemperatureByLocation godoc
-// @Summary      Получить температуру по локации
-// @Description  Возвращает текущую температуру для указанной локации
+// GetTemperatureByRoom godoc
+// @Summary      Получить температуру по комнате
+// @Description  Возвращает текущую температуру для указанной комнаты
 // @Tags         temperature
 // @Produce      json
-// @Param        location path string true "Название локации (Living Room, Bedroom, Kitchen)"
+// @Param        room path string true "Название комнаты"
 // @Success      200 {object} map[string]interface{}
 // @Failure      400 {object} map[string]string
 // @Failure      500 {object} map[string]string
-// @Router       /sensors/temperature/{location} [get]
-func (h *SensorHandler) GetTemperatureByLocation(c *gin.Context) {
-	location := c.Param("location")
-	if location == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Location is required"})
+// @Router       /devices/temperature/{room} [get]
+func (h *DeviceHandler) GetTemperatureByRoom(c *gin.Context) {
+	room := c.Param("room")
+	if room == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Room is required"})
 		return
 	}
 
-	// Fetch temperature data from the external API
-	tempData, err := h.TemperatureService.GetTemperature(location)
+	tempData, err := h.TemperatureService.GetTemperature(room)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": fmt.Sprintf("Failed to fetch temperature data: %v", err),
@@ -158,9 +159,8 @@ func (h *SensorHandler) GetTemperatureByLocation(c *gin.Context) {
 		return
 	}
 
-	// Return the temperature data
 	c.JSON(http.StatusOK, gin.H{
-		"location":    tempData.Location,
+		"room":        tempData.Location,
 		"value":       tempData.Value,
 		"unit":        tempData.Unit,
 		"status":      tempData.Status,
@@ -169,145 +169,218 @@ func (h *SensorHandler) GetTemperatureByLocation(c *gin.Context) {
 	})
 }
 
-// CreateSensor godoc
-// @Summary      Создать датчик
-// @Description  Создает новый датчик и зеркалирует в device-service
-// @Tags         sensors
+// CreateDevice godoc
+// @Summary      Создать устройство
+// @Description  Создает новое устройство и зеркалирует в device-service
+// @Tags         devices
 // @Accept       json
 // @Produce      json
-// @Param        sensor body models.SensorCreate true "Данные датчика"
-// @Success      201 {object} models.Sensor
+// @Param        device body models.DeviceCreate true "Данные устройства"
+// @Success      201 {object} models.Device
 // @Failure      400 {object} map[string]string
 // @Failure      500 {object} map[string]string
-// @Router       /sensors [post]
-func (h *SensorHandler) CreateSensor(c *gin.Context) {
-	var sensorCreate models.SensorCreate
-	if err := c.ShouldBindJSON(&sensorCreate); err != nil {
+// @Router       /devices [post]
+func (h *DeviceHandler) CreateDevice(c *gin.Context) {
+	var deviceCreate models.DeviceCreate
+	if err := c.ShouldBindJSON(&deviceCreate); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	sensor, err := h.DB.CreateSensor(context.Background(), sensorCreate)
+	device, err := h.DB.CreateDevice(context.Background(), deviceCreate)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	// Mirror to device-service via gRPC (non-fatal)
 	if h.DeviceClient != nil {
 		if _, err := h.DeviceClient.CreateDevice(context.Background(),
-			sensorCreate.Name, string(sensorCreate.Type),
-			sensorCreate.Unit, sensorCreate.Location); err != nil {
+			deviceCreate.Name, string(deviceCreate.Type),
+			deviceCreate.Unit, int32(deviceCreate.RoomID)); err != nil {
 			log.Printf("device-service CreateDevice failed (continuing): %v", err)
 		} else {
-			log.Printf("Mirrored sensor %d to device-service", sensor.ID)
+			log.Printf("Mirrored device %d to device-service", device.ID)
 		}
 	}
 
-	c.JSON(http.StatusCreated, sensor)
+	c.JSON(http.StatusCreated, device)
 }
 
-// UpdateSensor godoc
-// @Summary      Обновить датчик
-// @Description  Обновляет данные существующего датчика
-// @Tags         sensors
+// UpdateDevice godoc
+// @Summary      Обновить устройство
+// @Description  Обновляет данные существующего устройства
+// @Tags         devices
 // @Accept       json
 // @Produce      json
-// @Param        id path int true "ID датчика"
-// @Param        sensor body models.SensorUpdate true "Данные для обновления"
-// @Success      200 {object} models.Sensor
+// @Param        id path int true "ID устройства"
+// @Param        device body models.DeviceUpdate true "Данные для обновления"
+// @Success      200 {object} models.Device
 // @Failure      400 {object} map[string]string
 // @Failure      500 {object} map[string]string
-// @Router       /sensors/{id} [put]
-func (h *SensorHandler) UpdateSensor(c *gin.Context) {
+// @Router       /devices/{id} [put]
+func (h *DeviceHandler) UpdateDevice(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid sensor ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid device ID"})
 		return
 	}
 
-	var sensorUpdate models.SensorUpdate
-	if err := c.ShouldBindJSON(&sensorUpdate); err != nil {
+	var deviceUpdate models.DeviceUpdate
+	if err := c.ShouldBindJSON(&deviceUpdate); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	sensor, err := h.DB.UpdateSensor(context.Background(), id, sensorUpdate)
+	device, err := h.DB.UpdateDevice(context.Background(), id, deviceUpdate)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, sensor)
+	c.JSON(http.StatusOK, device)
 }
 
-// DeleteSensor godoc
-// @Summary      Удалить датчик
-// @Description  Удаляет датчик и зеркалирует удаление в device-service
-// @Tags         sensors
+// DeleteDevice godoc
+// @Summary      Удалить устройство
+// @Description  Удаляет устройство и зеркалирует удаление в device-service
+// @Tags         devices
 // @Produce      json
-// @Param        id path int true "ID датчика"
+// @Param        id path int true "ID устройства"
 // @Success      200 {object} map[string]string
 // @Failure      400 {object} map[string]string
 // @Failure      500 {object} map[string]string
-// @Router       /sensors/{id} [delete]
-func (h *SensorHandler) DeleteSensor(c *gin.Context) {
+// @Router       /devices/{id} [delete]
+func (h *DeviceHandler) DeleteDevice(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid sensor ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid device ID"})
 		return
 	}
 
-	err = h.DB.DeleteSensor(context.Background(), id)
+	err = h.DB.DeleteDevice(context.Background(), id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	// Mirror to device-service via gRPC (non-fatal)
 	if h.DeviceClient != nil {
 		if err := h.DeviceClient.DeleteDevice(context.Background(), int32(id)); err != nil {
 			log.Printf("device-service DeleteDevice failed (continuing): %v", err)
 		}
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Sensor deleted successfully"})
+	c.JSON(http.StatusOK, gin.H{"message": "Device deleted successfully"})
 }
 
-// UpdateSensorValue godoc
-// @Summary      Обновить значение датчика
-// @Description  Обновляет текущее значение и статус датчика
-// @Tags         sensors
-// @Accept       json
+// GetRooms godoc
+// @Summary      Получить комнаты
+// @Tags         rooms
 // @Produce      json
-// @Param        id path int true "ID датчика"
-// @Param        value body object true "Значение и статус" example({"value": 23.5, "status": "active"})
-// @Success      200 {object} map[string]string
-// @Failure      400 {object} map[string]string
-// @Failure      500 {object} map[string]string
-// @Router       /sensors/{id}/value [patch]
-func (h *SensorHandler) UpdateSensorValue(c *gin.Context) {
-	id, err := strconv.Atoi(c.Param("id"))
+// @Param        house_id query int true "ID дома"
+// @Success      200 {array} models.Room
+// @Router       /rooms [get]
+func (h *DeviceHandler) GetRooms(c *gin.Context) {
+	houseID, err := strconv.Atoi(c.Query("house_id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid sensor ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "house_id is required"})
 		return
 	}
 
-	var request struct {
-		Value  float64 `json:"value" binding:"required"`
-		Status string  `json:"status" binding:"required"`
-	}
-
-	if err := c.ShouldBindJSON(&request); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	err = h.DB.UpdateSensorValue(context.Background(), id, request.Value, request.Status)
+	rooms, err := h.DB.GetRooms(context.Background(), houseID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+	c.JSON(http.StatusOK, rooms)
+}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Sensor value updated successfully"})
+// CreateRoom godoc
+// @Summary      Создать комнату
+// @Tags         rooms
+// @Accept       json
+// @Produce      json
+// @Param        room body models.RoomCreate true "Данные комнаты"
+// @Success      201 {object} models.Room
+// @Router       /rooms [post]
+func (h *DeviceHandler) CreateRoom(c *gin.Context) {
+	var roomCreate models.RoomCreate
+	if err := c.ShouldBindJSON(&roomCreate); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	room, err := h.DB.CreateRoom(context.Background(), roomCreate)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusCreated, room)
+}
+
+// GetHouses godoc
+// @Summary      Получить дома
+// @Tags         houses
+// @Produce      json
+// @Param        owner_id query int true "ID владельца"
+// @Success      200 {array} models.House
+// @Router       /houses [get]
+func (h *DeviceHandler) GetHouses(c *gin.Context) {
+	ownerID, err := strconv.Atoi(c.Query("owner_id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "owner_id is required"})
+		return
+	}
+
+	houses, err := h.DB.GetHouses(context.Background(), ownerID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, houses)
+}
+
+// CreateHouse godoc
+// @Summary      Создать дом
+// @Tags         houses
+// @Accept       json
+// @Produce      json
+// @Param        house body models.HouseCreate true "Данные дома"
+// @Success      201 {object} models.House
+// @Router       /houses [post]
+func (h *DeviceHandler) CreateHouse(c *gin.Context) {
+	var houseCreate models.HouseCreate
+	if err := c.ShouldBindJSON(&houseCreate); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	house, err := h.DB.CreateHouse(context.Background(), houseCreate)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusCreated, house)
+}
+
+// CreateUser godoc
+// @Summary      Создать пользователя
+// @Tags         users
+// @Accept       json
+// @Produce      json
+// @Param        user body models.UserCreate true "Данные пользователя"
+// @Success      201 {object} models.User
+// @Router       /users [post]
+func (h *DeviceHandler) CreateUser(c *gin.Context) {
+	var userCreate models.UserCreate
+	if err := c.ShouldBindJSON(&userCreate); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	user, err := h.DB.CreateUser(context.Background(), userCreate)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusCreated, user)
 }

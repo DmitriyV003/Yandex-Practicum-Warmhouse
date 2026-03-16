@@ -24,7 +24,7 @@ const (
 
 type RecordTelemetryRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	SensorId      int32                  `protobuf:"varint,1,opt,name=sensor_id,json=sensorId,proto3" json:"sensor_id,omitempty"`
+	DeviceId      int32                  `protobuf:"varint,1,opt,name=device_id,json=deviceId,proto3" json:"device_id,omitempty"`
 	Value         float64                `protobuf:"fixed64,2,opt,name=value,proto3" json:"value,omitempty"`
 	Unit          string                 `protobuf:"bytes,3,opt,name=unit,proto3" json:"unit,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -61,9 +61,9 @@ func (*RecordTelemetryRequest) Descriptor() ([]byte, []int) {
 	return file_proto_telemetry_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *RecordTelemetryRequest) GetSensorId() int32 {
+func (x *RecordTelemetryRequest) GetDeviceId() int32 {
 	if x != nil {
-		return x.SensorId
+		return x.DeviceId
 	}
 	return 0
 }
@@ -84,7 +84,7 @@ func (x *RecordTelemetryRequest) GetUnit() string {
 
 type GetTelemetryRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	SensorId      int32                  `protobuf:"varint,1,opt,name=sensor_id,json=sensorId,proto3" json:"sensor_id,omitempty"`
+	DeviceId      int32                  `protobuf:"varint,1,opt,name=device_id,json=deviceId,proto3" json:"device_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -119,16 +119,16 @@ func (*GetTelemetryRequest) Descriptor() ([]byte, []int) {
 	return file_proto_telemetry_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *GetTelemetryRequest) GetSensorId() int32 {
+func (x *GetTelemetryRequest) GetDeviceId() int32 {
 	if x != nil {
-		return x.SensorId
+		return x.DeviceId
 	}
 	return 0
 }
 
 type ListTelemetryRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	SensorId      int32                  `protobuf:"varint,1,opt,name=sensor_id,json=sensorId,proto3" json:"sensor_id,omitempty"`
+	DeviceId      int32                  `protobuf:"varint,1,opt,name=device_id,json=deviceId,proto3" json:"device_id,omitempty"`
 	Limit         int32                  `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -164,9 +164,9 @@ func (*ListTelemetryRequest) Descriptor() ([]byte, []int) {
 	return file_proto_telemetry_proto_rawDescGZIP(), []int{2}
 }
 
-func (x *ListTelemetryRequest) GetSensorId() int32 {
+func (x *ListTelemetryRequest) GetDeviceId() int32 {
 	if x != nil {
-		return x.SensorId
+		return x.DeviceId
 	}
 	return 0
 }
@@ -180,8 +180,8 @@ func (x *ListTelemetryRequest) GetLimit() int32 {
 
 type CollectFromSensorRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	SensorId      int32                  `protobuf:"varint,1,opt,name=sensor_id,json=sensorId,proto3" json:"sensor_id,omitempty"`
-	Location      string                 `protobuf:"bytes,2,opt,name=location,proto3" json:"location,omitempty"`
+	DeviceId      int32                  `protobuf:"varint,1,opt,name=device_id,json=deviceId,proto3" json:"device_id,omitempty"`
+	RoomName      string                 `protobuf:"bytes,2,opt,name=room_name,json=roomName,proto3" json:"room_name,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -216,16 +216,16 @@ func (*CollectFromSensorRequest) Descriptor() ([]byte, []int) {
 	return file_proto_telemetry_proto_rawDescGZIP(), []int{3}
 }
 
-func (x *CollectFromSensorRequest) GetSensorId() int32 {
+func (x *CollectFromSensorRequest) GetDeviceId() int32 {
 	if x != nil {
-		return x.SensorId
+		return x.DeviceId
 	}
 	return 0
 }
 
-func (x *CollectFromSensorRequest) GetLocation() string {
+func (x *CollectFromSensorRequest) GetRoomName() string {
 	if x != nil {
-		return x.Location
+		return x.RoomName
 	}
 	return ""
 }
@@ -233,7 +233,7 @@ func (x *CollectFromSensorRequest) GetLocation() string {
 type TelemetryResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            int32                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
-	SensorId      int32                  `protobuf:"varint,2,opt,name=sensor_id,json=sensorId,proto3" json:"sensor_id,omitempty"`
+	DeviceId      int32                  `protobuf:"varint,2,opt,name=device_id,json=deviceId,proto3" json:"device_id,omitempty"`
 	Value         float64                `protobuf:"fixed64,3,opt,name=value,proto3" json:"value,omitempty"`
 	Unit          string                 `protobuf:"bytes,4,opt,name=unit,proto3" json:"unit,omitempty"`
 	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
@@ -278,9 +278,9 @@ func (x *TelemetryResponse) GetId() int32 {
 	return 0
 }
 
-func (x *TelemetryResponse) GetSensorId() int32 {
+func (x *TelemetryResponse) GetDeviceId() int32 {
 	if x != nil {
-		return x.SensorId
+		return x.DeviceId
 	}
 	return 0
 }
@@ -356,20 +356,20 @@ const file_proto_telemetry_proto_rawDesc = "" +
 	"\n" +
 	"\x15proto/telemetry.proto\x12\ttelemetry\x1a\x1fgoogle/protobuf/timestamp.proto\"_\n" +
 	"\x16RecordTelemetryRequest\x12\x1b\n" +
-	"\tsensor_id\x18\x01 \x01(\x05R\bsensorId\x12\x14\n" +
+	"\tdevice_id\x18\x01 \x01(\x05R\bdeviceId\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\x01R\x05value\x12\x12\n" +
 	"\x04unit\x18\x03 \x01(\tR\x04unit\"2\n" +
 	"\x13GetTelemetryRequest\x12\x1b\n" +
-	"\tsensor_id\x18\x01 \x01(\x05R\bsensorId\"I\n" +
+	"\tdevice_id\x18\x01 \x01(\x05R\bdeviceId\"I\n" +
 	"\x14ListTelemetryRequest\x12\x1b\n" +
-	"\tsensor_id\x18\x01 \x01(\x05R\bsensorId\x12\x14\n" +
-	"\x05limit\x18\x02 \x01(\x05R\x05limit\"S\n" +
+	"\tdevice_id\x18\x01 \x01(\x05R\bdeviceId\x12\x14\n" +
+	"\x05limit\x18\x02 \x01(\x05R\x05limit\"T\n" +
 	"\x18CollectFromSensorRequest\x12\x1b\n" +
-	"\tsensor_id\x18\x01 \x01(\x05R\bsensorId\x12\x1a\n" +
-	"\blocation\x18\x02 \x01(\tR\blocation\"\xa5\x01\n" +
+	"\tdevice_id\x18\x01 \x01(\x05R\bdeviceId\x12\x1b\n" +
+	"\troom_name\x18\x02 \x01(\tR\broomName\"\xa5\x01\n" +
 	"\x11TelemetryResponse\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x05R\x02id\x12\x1b\n" +
-	"\tsensor_id\x18\x02 \x01(\x05R\bsensorId\x12\x14\n" +
+	"\tdevice_id\x18\x02 \x01(\x05R\bdeviceId\x12\x14\n" +
 	"\x05value\x18\x03 \x01(\x01R\x05value\x12\x12\n" +
 	"\x04unit\x18\x04 \x01(\tR\x04unit\x129\n" +
 	"\n" +

@@ -27,12 +27,12 @@ func (c *DeviceClient) Close() {
 	c.conn.Close()
 }
 
-func (c *DeviceClient) CreateDevice(ctx context.Context, name, devType, unit, location string) (*pb.DeviceResponse, error) {
+func (c *DeviceClient) CreateDevice(ctx context.Context, name, devType, unit string, roomID int32) (*pb.DeviceResponse, error) {
 	return c.client.CreateDevice(ctx, &pb.CreateDeviceRequest{
-		Name:     name,
-		Type:     devType,
-		Unit:     unit,
-		Location: location,
+		Name:   name,
+		Type:   devType,
+		Unit:   unit,
+		RoomId: roomID,
 	})
 }
 

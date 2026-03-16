@@ -27,7 +27,7 @@ type CreateDeviceRequest struct {
 	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	Type          string                 `protobuf:"bytes,2,opt,name=type,proto3" json:"type,omitempty"`
 	Unit          string                 `protobuf:"bytes,3,opt,name=unit,proto3" json:"unit,omitempty"`
-	Location      string                 `protobuf:"bytes,4,opt,name=location,proto3" json:"location,omitempty"`
+	RoomId        int32                  `protobuf:"varint,4,opt,name=room_id,json=roomId,proto3" json:"room_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -83,11 +83,11 @@ func (x *CreateDeviceRequest) GetUnit() string {
 	return ""
 }
 
-func (x *CreateDeviceRequest) GetLocation() string {
+func (x *CreateDeviceRequest) GetRoomId() int32 {
 	if x != nil {
-		return x.Location
+		return x.RoomId
 	}
-	return ""
+	return 0
 }
 
 type GetDeviceRequest struct {
@@ -137,7 +137,7 @@ func (x *GetDeviceRequest) GetId() int32 {
 type ListDevicesRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Status        string                 `protobuf:"bytes,1,opt,name=status,proto3" json:"status,omitempty"`
-	Location      string                 `protobuf:"bytes,2,opt,name=location,proto3" json:"location,omitempty"`
+	RoomId        int32                  `protobuf:"varint,2,opt,name=room_id,json=roomId,proto3" json:"room_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -179,11 +179,11 @@ func (x *ListDevicesRequest) GetStatus() string {
 	return ""
 }
 
-func (x *ListDevicesRequest) GetLocation() string {
+func (x *ListDevicesRequest) GetRoomId() int32 {
 	if x != nil {
-		return x.Location
+		return x.RoomId
 	}
-	return ""
+	return 0
 }
 
 type UpdateDeviceRequest struct {
@@ -297,9 +297,10 @@ type DeviceResponse struct {
 	Type          string                 `protobuf:"bytes,3,opt,name=type,proto3" json:"type,omitempty"`
 	Unit          string                 `protobuf:"bytes,4,opt,name=unit,proto3" json:"unit,omitempty"`
 	Status        string                 `protobuf:"bytes,5,opt,name=status,proto3" json:"status,omitempty"`
-	Location      string                 `protobuf:"bytes,6,opt,name=location,proto3" json:"location,omitempty"`
-	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	RoomId        int32                  `protobuf:"varint,6,opt,name=room_id,json=roomId,proto3" json:"room_id,omitempty"`
+	RoomName      string                 `protobuf:"bytes,7,opt,name=room_name,json=roomName,proto3" json:"room_name,omitempty"`
+	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -369,9 +370,16 @@ func (x *DeviceResponse) GetStatus() string {
 	return ""
 }
 
-func (x *DeviceResponse) GetLocation() string {
+func (x *DeviceResponse) GetRoomId() int32 {
 	if x != nil {
-		return x.Location
+		return x.RoomId
+	}
+	return 0
+}
+
+func (x *DeviceResponse) GetRoomName() string {
+	if x != nil {
+		return x.RoomName
 	}
 	return ""
 }
@@ -482,34 +490,35 @@ var File_proto_device_device_proto protoreflect.FileDescriptor
 
 const file_proto_device_device_proto_rawDesc = "" +
 	"\n" +
-	"\x19proto/device/device.proto\x12\x06device\x1a\x1fgoogle/protobuf/timestamp.proto\"m\n" +
+	"\x19proto/device/device.proto\x12\x06device\x1a\x1fgoogle/protobuf/timestamp.proto\"j\n" +
 	"\x13CreateDeviceRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x12\n" +
 	"\x04type\x18\x02 \x01(\tR\x04type\x12\x12\n" +
-	"\x04unit\x18\x03 \x01(\tR\x04unit\x12\x1a\n" +
-	"\blocation\x18\x04 \x01(\tR\blocation\"\"\n" +
+	"\x04unit\x18\x03 \x01(\tR\x04unit\x12\x17\n" +
+	"\aroom_id\x18\x04 \x01(\x05R\x06roomId\"\"\n" +
 	"\x10GetDeviceRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\x05R\x02id\"H\n" +
+	"\x02id\x18\x01 \x01(\x05R\x02id\"E\n" +
 	"\x12ListDevicesRequest\x12\x16\n" +
-	"\x06status\x18\x01 \x01(\tR\x06status\x12\x1a\n" +
-	"\blocation\x18\x02 \x01(\tR\blocation\"Q\n" +
+	"\x06status\x18\x01 \x01(\tR\x06status\x12\x17\n" +
+	"\aroom_id\x18\x02 \x01(\x05R\x06roomId\"Q\n" +
 	"\x13UpdateDeviceRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x05R\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x16\n" +
 	"\x06status\x18\x03 \x01(\tR\x06status\"%\n" +
 	"\x13DeleteDeviceRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\x05R\x02id\"\x86\x02\n" +
+	"\x02id\x18\x01 \x01(\x05R\x02id\"\xa0\x02\n" +
 	"\x0eDeviceResponse\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x05R\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x12\n" +
 	"\x04type\x18\x03 \x01(\tR\x04type\x12\x12\n" +
 	"\x04unit\x18\x04 \x01(\tR\x04unit\x12\x16\n" +
-	"\x06status\x18\x05 \x01(\tR\x06status\x12\x1a\n" +
-	"\blocation\x18\x06 \x01(\tR\blocation\x129\n" +
+	"\x06status\x18\x05 \x01(\tR\x06status\x12\x17\n" +
+	"\aroom_id\x18\x06 \x01(\x05R\x06roomId\x12\x1b\n" +
+	"\troom_name\x18\a \x01(\tR\broomName\x129\n" +
 	"\n" +
-	"created_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
+	"created_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"G\n" +
+	"updated_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"G\n" +
 	"\x13ListDevicesResponse\x120\n" +
 	"\adevices\x18\x01 \x03(\v2\x16.device.DeviceResponseR\adevices\"0\n" +
 	"\x14DeleteDeviceResponse\x12\x18\n" +

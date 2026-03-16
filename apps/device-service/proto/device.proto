@@ -15,10 +15,10 @@ service DeviceService {
 }
 
 message CreateDeviceRequest {
-  string name     = 1;
-  string type     = 2;
-  string unit     = 3;
-  string location = 4;
+  string name    = 1;
+  string type    = 2;
+  string unit    = 3;
+  int32  room_id = 4;
 }
 
 message GetDeviceRequest {
@@ -26,8 +26,8 @@ message GetDeviceRequest {
 }
 
 message ListDevicesRequest {
-  string status   = 1;
-  string location = 2;
+  string status  = 1;
+  int32  room_id = 2;
 }
 
 message UpdateDeviceRequest {
@@ -41,14 +41,15 @@ message DeleteDeviceRequest {
 }
 
 message DeviceResponse {
-  int32  id       = 1;
-  string name     = 2;
-  string type     = 3;
-  string unit     = 4;
-  string status   = 5;
-  string location = 6;
-  google.protobuf.Timestamp created_at = 7;
-  google.protobuf.Timestamp updated_at = 8;
+  int32  id        = 1;
+  string name      = 2;
+  string type      = 3;
+  string unit      = 4;
+  string status    = 5;
+  int32  room_id   = 6;
+  string room_name = 7;
+  google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp updated_at = 9;
 }
 
 message ListDevicesResponse {

@@ -27,15 +27,15 @@ func (c *TelemetryClient) Close() {
 	c.conn.Close()
 }
 
-func (c *TelemetryClient) CollectFromSensor(ctx context.Context, sensorID int32, location string) (*pb.TelemetryResponse, error) {
+func (c *TelemetryClient) CollectFromSensor(ctx context.Context, deviceID int32, roomName string) (*pb.TelemetryResponse, error) {
 	return c.client.CollectFromSensor(ctx, &pb.CollectFromSensorRequest{
-		SensorId: sensorID,
-		Location: location,
+		DeviceId: deviceID,
+		RoomName: roomName,
 	})
 }
 
-func (c *TelemetryClient) GetLatest(ctx context.Context, sensorID int32) (*pb.TelemetryResponse, error) {
+func (c *TelemetryClient) GetLatest(ctx context.Context, deviceID int32) (*pb.TelemetryResponse, error) {
 	return c.client.GetLatestTelemetry(ctx, &pb.GetTelemetryRequest{
-		SensorId: sensorID,
+		DeviceId: deviceID,
 	})
 }

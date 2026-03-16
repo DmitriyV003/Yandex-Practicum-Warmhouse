@@ -33,43 +33,43 @@ func (db *DB) Close() {
 func (db *DB) SaveTelemetry(ctx context.Context, t models.TelemetryCreate) (models.TelemetryRecord, error) {
 	var record models.TelemetryRecord
 	err := db.Pool.QueryRow(ctx,
-		`INSERT INTO telemetry_records (sensor_id, value, unit)
+		`INSERT INTO telemetry_records (device_id, value, unit)
 		 VALUES ($1, $2, $3)
-		 RETURNING id, sensor_id, value, unit, created_at`,
-		t.SensorID, t.Value, t.Unit,
-	).Scan(&record.ID, &record.SensorID, &record.Value, &record.Unit, &record.CreatedAt)
+		 RETURNING id, device_id, value, unit, created_at`,
+		t.DeviceID, t.Value, t.Unit,
+	).Scan(&record.ID, &record.DeviceID, &record.Value, &record.Unit, &record.CreatedAt)
 	if err != nil {
 		return models.TelemetryRecord{}, fmt.Errorf("save telemetry: %w", err)
 	}
 	return record, nil
 }
 
-func (db *DB) GetLatestBySensorID(ctx context.Context, sensorID int) (models.TelemetryRecord, error) {
+func (db *DB) GetLatestByDeviceID(ctx context.Context, deviceID int) (models.TelemetryRecord, error) {
 	var record models.TelemetryRecord
 	err := db.Pool.QueryRow(ctx,
-		`SELECT id, sensor_id, value, unit, created_at
+		`SELECT id, device_id, value, unit, created_at
 		 FROM telemetry_records
-		 WHERE sensor_id = $1
+		 WHERE device_id = $1
 		 ORDER BY created_at DESC
-		 LIMIT 1`, sensorID,
-	).Scan(&record.ID, &record.SensorID, &record.Value, &record.Unit, &record.CreatedAt)
+		 LIMIT 1`, deviceID,
+	).Scan(&record.ID, &record.DeviceID, &record.Value, &record.Unit, &record.CreatedAt)
 	if err != nil {
 		return models.TelemetryRecord{}, fmt.Errorf("get latest telemetry: %w", err)
 	}
 	return record, nil
 }
 
-func (db *DB) ListBySensorID(ctx context.Context, sensorID, limit int) ([]models.TelemetryRecord, error) {
+func (db *DB) ListByDeviceID(ctx context.Context, deviceID, limit int) ([]models.TelemetryRecord, error) {
 	if limit <= 0 {
 		limit = 10
 	}
 
 	rows, err := db.Pool.Query(ctx,
-		`SELECT id, sensor_id, value, unit, created_at
+		`SELECT id, device_id, value, unit, created_at
 		 FROM telemetry_records
-		 WHERE sensor_id = $1
+		 WHERE device_id = $1
 		 ORDER BY created_at DESC
-		 LIMIT $2`, sensorID, limit,
+		 LIMIT $2`, deviceID, limit,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("list telemetry: %w", err)
@@ -79,7 +79,7 @@ func (db *DB) ListBySensorID(ctx context.Context, sensorID, limit int) ([]models
 	var records []models.TelemetryRecord
 	for rows.Next() {
 		var r models.TelemetryRecord
-		if err := rows.Scan(&r.ID, &r.SensorID, &r.Value, &r.Unit, &r.CreatedAt); err != nil {
+		if err := rows.Scan(&r.ID, &r.DeviceID, &r.Value, &r.Unit, &r.CreatedAt); err != nil {
 			return nil, fmt.Errorf("scan telemetry: %w", err)
 		}
 		records = append(records, r)
@@ -87,8 +87,8 @@ func (db *DB) ListBySensorID(ctx context.Context, sensorID, limit int) ([]models
 	return records, rows.Err()
 }
 
-func (db *DB) DeleteBySensorID(ctx context.Context, sensorID int) error {
-	_, err := db.Pool.Exec(ctx, "DELETE FROM telemetry_records WHERE sensor_id = $1", sensorID)
+func (db *DB) DeleteByDeviceID(ctx context.Context, deviceID int) error {
+	_, err := db.Pool.Exec(ctx, "DELETE FROM telemetry_records WHERE device_id = $1", deviceID)
 	if err != nil {
 		return fmt.Errorf("delete telemetry: %w", err)
 	}

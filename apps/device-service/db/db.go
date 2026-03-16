@@ -32,61 +32,68 @@ func (db *DB) Close() {
 	}
 }
 
-func (db *DB) GetOrCreateLocation(ctx context.Context, name string) (int, error) {
+func (db *DB) GetOrCreateRoom(ctx context.Context, name string, houseID int) (int, error) {
 	var id int
 	err := db.Pool.QueryRow(ctx,
-		`INSERT INTO locations (name) VALUES ($1) ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name RETURNING id`,
-		name,
+		`INSERT INTO rooms (name, house_id) VALUES ($1, $2)
+		 ON CONFLICT DO NOTHING
+		 RETURNING id`,
+		name, houseID,
 	).Scan(&id)
 	if err != nil {
-		return 0, fmt.Errorf("get or create location: %w", err)
+		// If conflict, find existing
+		err = db.Pool.QueryRow(ctx,
+			`SELECT id FROM rooms WHERE name = $1 AND house_id = $2`,
+			name, houseID,
+		).Scan(&id)
+		if err != nil {
+			return 0, fmt.Errorf("get or create room: %w", err)
+		}
 	}
 	return id, nil
 }
 
 func (db *DB) CreateDevice(ctx context.Context, d models.DeviceCreate) (models.Device, error) {
-	locationID, err := db.GetOrCreateLocation(ctx, d.Location)
-	if err != nil {
-		return models.Device{}, err
-	}
-
 	now := time.Now()
 	var device models.Device
-	err = db.Pool.QueryRow(ctx,
-		`INSERT INTO devices (name, type, unit, status, location_id, created_at, updated_at)
+	err := db.Pool.QueryRow(ctx,
+		`INSERT INTO devices (name, type, unit, status, room_id, created_at, updated_at)
 		 VALUES ($1, $2, $3, 'inactive', $4, $5, $5)
-		 RETURNING id, name, type, unit, status, location_id, created_at, updated_at`,
-		d.Name, d.Type, d.Unit, locationID, now,
+		 RETURNING id, name, type, unit, status, room_id, created_at, updated_at`,
+		d.Name, d.Type, d.Unit, d.RoomID, now,
 	).Scan(&device.ID, &device.Name, &device.Type, &device.Unit, &device.Status,
-		&device.LocationID, &device.CreatedAt, &device.UpdatedAt)
+		&device.RoomID, &device.CreatedAt, &device.UpdatedAt)
 	if err != nil {
 		return models.Device{}, fmt.Errorf("create device: %w", err)
 	}
-	device.Location = d.Location
+
+	// Fetch room name
+	_ = db.Pool.QueryRow(ctx, `SELECT name FROM rooms WHERE id = $1`, d.RoomID).Scan(&device.RoomName)
+
 	return device, nil
 }
 
 func (db *DB) GetDevice(ctx context.Context, id int) (models.Device, error) {
 	var d models.Device
 	err := db.Pool.QueryRow(ctx,
-		`SELECT d.id, d.name, d.type, d.unit, d.status, d.location_id,
-		        l.name AS location_name, d.created_at, d.updated_at
+		`SELECT d.id, d.name, d.type, d.unit, d.status, d.room_id,
+		        r.name AS room_name, d.created_at, d.updated_at
 		 FROM devices d
-		 JOIN locations l ON l.id = d.location_id
+		 JOIN rooms r ON r.id = d.room_id
 		 WHERE d.id = $1`, id,
-	).Scan(&d.ID, &d.Name, &d.Type, &d.Unit, &d.Status, &d.LocationID,
-		&d.Location, &d.CreatedAt, &d.UpdatedAt)
+	).Scan(&d.ID, &d.Name, &d.Type, &d.Unit, &d.Status, &d.RoomID,
+		&d.RoomName, &d.CreatedAt, &d.UpdatedAt)
 	if err != nil {
 		return models.Device{}, fmt.Errorf("get device: %w", err)
 	}
 	return d, nil
 }
 
-func (db *DB) ListDevices(ctx context.Context, status, location string) ([]models.Device, error) {
-	query := `SELECT d.id, d.name, d.type, d.unit, d.status, d.location_id,
-	                 l.name AS location_name, d.created_at, d.updated_at
+func (db *DB) ListDevices(ctx context.Context, status string, roomID int) ([]models.Device, error) {
+	query := `SELECT d.id, d.name, d.type, d.unit, d.status, d.room_id,
+	                 r.name AS room_name, d.created_at, d.updated_at
 	          FROM devices d
-	          JOIN locations l ON l.id = d.location_id
+	          JOIN rooms r ON r.id = d.room_id
 	          WHERE 1=1`
 	args := []interface{}{}
 	argIdx := 1
@@ -96,9 +103,9 @@ func (db *DB) ListDevices(ctx context.Context, status, location string) ([]model
 		args = append(args, status)
 		argIdx++
 	}
-	if location != "" {
-		query += fmt.Sprintf(" AND l.name = $%d", argIdx)
-		args = append(args, location)
+	if roomID > 0 {
+		query += fmt.Sprintf(" AND d.room_id = $%d", argIdx)
+		args = append(args, roomID)
 		argIdx++
 	}
 	query += " ORDER BY d.id"
@@ -112,8 +119,8 @@ func (db *DB) ListDevices(ctx context.Context, status, location string) ([]model
 	var devices []models.Device
 	for rows.Next() {
 		var d models.Device
-		if err := rows.Scan(&d.ID, &d.Name, &d.Type, &d.Unit, &d.Status, &d.LocationID,
-			&d.Location, &d.CreatedAt, &d.UpdatedAt); err != nil {
+		if err := rows.Scan(&d.ID, &d.Name, &d.Type, &d.Unit, &d.Status, &d.RoomID,
+			&d.RoomName, &d.CreatedAt, &d.UpdatedAt); err != nil {
 			return nil, fmt.Errorf("scan device: %w", err)
 		}
 		devices = append(devices, d)

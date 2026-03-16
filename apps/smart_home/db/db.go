@@ -11,239 +11,252 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// DB represents the database connection
 type DB struct {
 	Pool *pgxpool.Pool
 }
 
-// New creates a new DB instance
 func New(connString string) (*DB, error) {
 	pool, err := pgxpool.New(context.Background(), connString)
 	if err != nil {
 		return nil, fmt.Errorf("unable to connect to database: %w", err)
 	}
-
-	// Test the connection
 	if err := pool.Ping(context.Background()); err != nil {
 		return nil, fmt.Errorf("unable to ping database: %w", err)
 	}
-
 	return &DB{Pool: pool}, nil
 }
 
-// Close closes the database connection
 func (db *DB) Close() {
 	if db.Pool != nil {
 		db.Pool.Close()
 	}
 }
 
-// GetSensors retrieves all sensors from the database
-func (db *DB) GetSensors(ctx context.Context) ([]models.Sensor, error) {
-	query := `
-		SELECT id, name, type, location, value, unit, status, last_updated, created_at
-		FROM sensors
-		ORDER BY id
-	`
+// ---- Devices ----
 
-	rows, err := db.Pool.Query(ctx, query)
+func (db *DB) GetDevices(ctx context.Context) ([]models.Device, error) {
+	rows, err := db.Pool.Query(ctx,
+		`SELECT d.id, d.name, d.type, d.unit, d.status, d.room_id,
+		        r.name AS room_name, d.created_at, d.updated_at
+		 FROM devices d
+		 JOIN rooms r ON r.id = d.room_id
+		 ORDER BY d.id`)
 	if err != nil {
-		return nil, fmt.Errorf("error querying sensors: %w", err)
+		return nil, fmt.Errorf("error querying devices: %w", err)
 	}
 	defer rows.Close()
 
-	var sensors []models.Sensor
+	var devices []models.Device
 	for rows.Next() {
-		var s models.Sensor
-		err := rows.Scan(
-			&s.ID,
-			&s.Name,
-			&s.Type,
-			&s.Location,
-			&s.Value,
-			&s.Unit,
-			&s.Status,
-			&s.LastUpdated,
-			&s.CreatedAt,
-		)
+		var d models.Device
+		err := rows.Scan(&d.ID, &d.Name, &d.Type, &d.Unit, &d.Status,
+			&d.RoomID, &d.RoomName, &d.CreatedAt, &d.UpdatedAt)
 		if err != nil {
-			return nil, fmt.Errorf("error scanning sensor row: %w", err)
+			return nil, fmt.Errorf("error scanning device row: %w", err)
 		}
-		sensors = append(sensors, s)
+		devices = append(devices, d)
 	}
-
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("error iterating sensor rows: %w", err)
-	}
-
-	return sensors, nil
+	return devices, rows.Err()
 }
 
-// GetSensorByID retrieves a sensor by its ID
-func (db *DB) GetSensorByID(ctx context.Context, id int) (models.Sensor, error) {
-	query := `
-		SELECT id, name, type, location, value, unit, status, last_updated, created_at
-		FROM sensors
-		WHERE id = $1
-	`
-
-	var s models.Sensor
-	err := db.Pool.QueryRow(ctx, query, id).Scan(
-		&s.ID,
-		&s.Name,
-		&s.Type,
-		&s.Location,
-		&s.Value,
-		&s.Unit,
-		&s.Status,
-		&s.LastUpdated,
-		&s.CreatedAt,
-	)
+func (db *DB) GetDeviceByID(ctx context.Context, id int) (models.Device, error) {
+	var d models.Device
+	err := db.Pool.QueryRow(ctx,
+		`SELECT d.id, d.name, d.type, d.unit, d.status, d.room_id,
+		        r.name AS room_name, d.created_at, d.updated_at
+		 FROM devices d
+		 JOIN rooms r ON r.id = d.room_id
+		 WHERE d.id = $1`, id,
+	).Scan(&d.ID, &d.Name, &d.Type, &d.Unit, &d.Status,
+		&d.RoomID, &d.RoomName, &d.CreatedAt, &d.UpdatedAt)
 	if err != nil {
-		return models.Sensor{}, fmt.Errorf("error getting sensor by ID: %w", err)
+		return models.Device{}, fmt.Errorf("error getting device by ID: %w", err)
 	}
-
-	return s, nil
+	return d, nil
 }
 
-// CreateSensor creates a new sensor in the database
-func (db *DB) CreateSensor(ctx context.Context, s models.SensorCreate) (models.Sensor, error) {
-	query := `
-		INSERT INTO sensors (name, type, location, unit, status, last_updated, created_at)
-		VALUES ($1, $2, $3, $4, 'inactive', $5, $5)
-		RETURNING id, name, type, location, value, unit, status, last_updated, created_at
-	`
-
+func (db *DB) CreateDevice(ctx context.Context, d models.DeviceCreate) (models.Device, error) {
 	now := time.Now()
-	var sensor models.Sensor
-	err := db.Pool.QueryRow(ctx, query,
-		s.Name,
-		s.Type,
-		s.Location,
-		s.Unit,
-		now,
-	).Scan(
-		&sensor.ID,
-		&sensor.Name,
-		&sensor.Type,
-		&sensor.Location,
-		&sensor.Value,
-		&sensor.Unit,
-		&sensor.Status,
-		&sensor.LastUpdated,
-		&sensor.CreatedAt,
-	)
+	var device models.Device
+	err := db.Pool.QueryRow(ctx,
+		`INSERT INTO devices (name, type, unit, status, room_id, created_at, updated_at)
+		 VALUES ($1, $2, $3, 'inactive', $4, $5, $5)
+		 RETURNING id, name, type, unit, status, room_id, created_at, updated_at`,
+		d.Name, d.Type, d.Unit, d.RoomID, now,
+	).Scan(&device.ID, &device.Name, &device.Type, &device.Unit, &device.Status,
+		&device.RoomID, &device.CreatedAt, &device.UpdatedAt)
 	if err != nil {
-		return models.Sensor{}, fmt.Errorf("error creating sensor: %w", err)
+		return models.Device{}, fmt.Errorf("error creating device: %w", err)
 	}
 
-	return sensor, nil
+	_ = db.Pool.QueryRow(ctx, `SELECT name FROM rooms WHERE id = $1`, d.RoomID).Scan(&device.RoomName)
+
+	return device, nil
 }
 
-// UpdateSensor updates an existing sensor
-func (db *DB) UpdateSensor(ctx context.Context, id int, s models.SensorUpdate) (models.Sensor, error) {
-	// First check if the sensor exists
-	_, err := db.GetSensorByID(ctx, id)
+func (db *DB) UpdateDevice(ctx context.Context, id int, u models.DeviceUpdate) (models.Device, error) {
+	_, err := db.GetDeviceByID(ctx, id)
 	if err != nil {
-		return models.Sensor{}, err
+		return models.Device{}, err
 	}
 
-	// Build the update query dynamically based on which fields are provided
-	query := "UPDATE sensors SET last_updated = $1"
+	query := "UPDATE devices SET updated_at = $1"
 	args := []interface{}{time.Now()}
 	argCount := 2
 
-	if s.Name != "" {
+	if u.Name != "" {
 		query += fmt.Sprintf(", name = $%d", argCount)
-		args = append(args, s.Name)
+		args = append(args, u.Name)
 		argCount++
 	}
-
-	if s.Type != "" {
+	if u.Type != "" {
 		query += fmt.Sprintf(", type = $%d", argCount)
-		args = append(args, s.Type)
+		args = append(args, u.Type)
 		argCount++
 	}
-
-	if s.Location != "" {
-		query += fmt.Sprintf(", location = $%d", argCount)
-		args = append(args, s.Location)
-		argCount++
-	}
-
-	if s.Value != nil {
-		query += fmt.Sprintf(", value = $%d", argCount)
-		args = append(args, *s.Value)
-		argCount++
-	}
-
-	if s.Unit != "" {
+	if u.Unit != "" {
 		query += fmt.Sprintf(", unit = $%d", argCount)
-		args = append(args, s.Unit)
+		args = append(args, u.Unit)
 		argCount++
 	}
-
-	if s.Status != "" {
+	if u.Status != "" {
 		query += fmt.Sprintf(", status = $%d", argCount)
-		args = append(args, s.Status)
+		args = append(args, u.Status)
 		argCount++
 	}
 
-	// Add the WHERE clause and RETURNING clause
-	query += ` WHERE id = $` + fmt.Sprintf("%d", argCount) + `
-		RETURNING id, name, type, location, value, unit, status, last_updated, created_at`
+	query += fmt.Sprintf(` WHERE id = $%d
+		RETURNING id, name, type, unit, status, room_id, created_at, updated_at`, argCount)
 	args = append(args, id)
 
-	var sensor models.Sensor
+	var device models.Device
 	err = db.Pool.QueryRow(ctx, query, args...).Scan(
-		&sensor.ID,
-		&sensor.Name,
-		&sensor.Type,
-		&sensor.Location,
-		&sensor.Value,
-		&sensor.Unit,
-		&sensor.Status,
-		&sensor.LastUpdated,
-		&sensor.CreatedAt,
-	)
+		&device.ID, &device.Name, &device.Type, &device.Unit, &device.Status,
+		&device.RoomID, &device.CreatedAt, &device.UpdatedAt)
 	if err != nil {
-		return models.Sensor{}, fmt.Errorf("error updating sensor: %w", err)
+		return models.Device{}, fmt.Errorf("error updating device: %w", err)
 	}
 
-	return sensor, nil
+	_ = db.Pool.QueryRow(ctx, `SELECT name FROM rooms WHERE id = $1`, device.RoomID).Scan(&device.RoomName)
+
+	return device, nil
 }
 
-// DeleteSensor deletes a sensor by its ID
-func (db *DB) DeleteSensor(ctx context.Context, id int) error {
-	query := "DELETE FROM sensors WHERE id = $1"
-	result, err := db.Pool.Exec(ctx, query, id)
+func (db *DB) DeleteDevice(ctx context.Context, id int) error {
+	result, err := db.Pool.Exec(ctx, "DELETE FROM devices WHERE id = $1", id)
 	if err != nil {
-		return fmt.Errorf("error deleting sensor: %w", err)
+		return fmt.Errorf("error deleting device: %w", err)
 	}
-
 	if result.RowsAffected() == 0 {
-		return errors.New("sensor not found")
+		return errors.New("device not found")
 	}
-
 	return nil
 }
 
-// UpdateSensorValue updates the value and status of a sensor
-func (db *DB) UpdateSensorValue(ctx context.Context, id int, value float64, status string) error {
-	query := `
-		UPDATE sensors
-		SET value = $1, status = $2, last_updated = $3
-		WHERE id = $4
-	`
-
-	result, err := db.Pool.Exec(ctx, query, value, status, time.Now(), id)
+func (db *DB) UpdateDeviceStatus(ctx context.Context, id int, status string) error {
+	result, err := db.Pool.Exec(ctx,
+		`UPDATE devices SET status = $1, updated_at = $2 WHERE id = $3`,
+		status, time.Now(), id)
 	if err != nil {
-		return fmt.Errorf("error updating sensor value: %w", err)
+		return fmt.Errorf("error updating device status: %w", err)
 	}
-
 	if result.RowsAffected() == 0 {
-		return errors.New("sensor not found")
+		return errors.New("device not found")
 	}
-
 	return nil
+}
+
+// ---- Rooms ----
+
+func (db *DB) GetRooms(ctx context.Context, houseID int) ([]models.Room, error) {
+	rows, err := db.Pool.Query(ctx,
+		`SELECT id, name, house_id FROM rooms WHERE house_id = $1 ORDER BY id`, houseID)
+	if err != nil {
+		return nil, fmt.Errorf("error querying rooms: %w", err)
+	}
+	defer rows.Close()
+
+	var rooms []models.Room
+	for rows.Next() {
+		var r models.Room
+		if err := rows.Scan(&r.ID, &r.Name, &r.HouseID); err != nil {
+			return nil, fmt.Errorf("error scanning room: %w", err)
+		}
+		rooms = append(rooms, r)
+	}
+	return rooms, rows.Err()
+}
+
+func (db *DB) CreateRoom(ctx context.Context, r models.RoomCreate) (models.Room, error) {
+	var room models.Room
+	err := db.Pool.QueryRow(ctx,
+		`INSERT INTO rooms (name, house_id) VALUES ($1, $2) RETURNING id, name, house_id`,
+		r.Name, r.HouseID,
+	).Scan(&room.ID, &room.Name, &room.HouseID)
+	if err != nil {
+		return models.Room{}, fmt.Errorf("error creating room: %w", err)
+	}
+	return room, nil
+}
+
+// ---- Houses ----
+
+func (db *DB) GetHouses(ctx context.Context, ownerID int) ([]models.House, error) {
+	rows, err := db.Pool.Query(ctx,
+		`SELECT id, name, address, owner_id, created_at FROM houses WHERE owner_id = $1 ORDER BY id`, ownerID)
+	if err != nil {
+		return nil, fmt.Errorf("error querying houses: %w", err)
+	}
+	defer rows.Close()
+
+	var houses []models.House
+	for rows.Next() {
+		var h models.House
+		if err := rows.Scan(&h.ID, &h.Name, &h.Address, &h.OwnerID, &h.CreatedAt); err != nil {
+			return nil, fmt.Errorf("error scanning house: %w", err)
+		}
+		houses = append(houses, h)
+	}
+	return houses, rows.Err()
+}
+
+func (db *DB) CreateHouse(ctx context.Context, h models.HouseCreate) (models.House, error) {
+	var house models.House
+	err := db.Pool.QueryRow(ctx,
+		`INSERT INTO houses (name, address, owner_id, created_at)
+		 VALUES ($1, $2, $3, NOW())
+		 RETURNING id, name, address, owner_id, created_at`,
+		h.Name, h.Address, h.OwnerID,
+	).Scan(&house.ID, &house.Name, &house.Address, &house.OwnerID, &house.CreatedAt)
+	if err != nil {
+		return models.House{}, fmt.Errorf("error creating house: %w", err)
+	}
+	return house, nil
+}
+
+// ---- Users ----
+
+func (db *DB) CreateUser(ctx context.Context, u models.UserCreate) (models.User, error) {
+	var user models.User
+	err := db.Pool.QueryRow(ctx,
+		`INSERT INTO users (name, email, password_hash, created_at)
+		 VALUES ($1, $2, $3, NOW())
+		 RETURNING id, name, email, password_hash, created_at`,
+		u.Name, u.Email, u.Password,
+	).Scan(&user.ID, &user.Name, &user.Email, &user.PasswordHash, &user.CreatedAt)
+	if err != nil {
+		return models.User{}, fmt.Errorf("error creating user: %w", err)
+	}
+	return user, nil
+}
+
+func (db *DB) GetUserByID(ctx context.Context, id int) (models.User, error) {
+	var u models.User
+	err := db.Pool.QueryRow(ctx,
+		`SELECT id, name, email, password_hash, created_at FROM users WHERE id = $1`, id,
+	).Scan(&u.ID, &u.Name, &u.Email, &u.PasswordHash, &u.CreatedAt)
+	if err != nil {
+		return models.User{}, fmt.Errorf("error getting user: %w", err)
+	}
+	return u, nil
 }

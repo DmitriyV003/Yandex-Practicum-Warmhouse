@@ -25,7 +25,7 @@ type TelemetryServiceServer struct {
 
 func (s *TelemetryServiceServer) RecordTelemetry(ctx context.Context, req *pb.RecordTelemetryRequest) (*pb.TelemetryResponse, error) {
 	record, err := s.DB.SaveTelemetry(ctx, models.TelemetryCreate{
-		SensorID: int(req.SensorId),
+		DeviceID: int(req.DeviceId),
 		Value:    req.Value,
 		Unit:     req.Unit,
 	})
@@ -34,7 +34,7 @@ func (s *TelemetryServiceServer) RecordTelemetry(ctx context.Context, req *pb.Re
 	}
 
 	s.Broker.Publish(ctx, "telemetry.updated", map[string]interface{}{
-		"device_id": req.SensorId,
+		"device_id": req.DeviceId,
 		"value":     record.Value,
 		"unit":      record.Unit,
 	})
@@ -43,7 +43,7 @@ func (s *TelemetryServiceServer) RecordTelemetry(ctx context.Context, req *pb.Re
 }
 
 func (s *TelemetryServiceServer) GetLatestTelemetry(ctx context.Context, req *pb.GetTelemetryRequest) (*pb.TelemetryResponse, error) {
-	record, err := s.DB.GetLatestBySensorID(ctx, int(req.SensorId))
+	record, err := s.DB.GetLatestByDeviceID(ctx, int(req.DeviceId))
 	if err != nil {
 		return nil, status.Errorf(codes.NotFound, "telemetry not found: %v", err)
 	}
@@ -51,7 +51,7 @@ func (s *TelemetryServiceServer) GetLatestTelemetry(ctx context.Context, req *pb
 }
 
 func (s *TelemetryServiceServer) ListTelemetry(ctx context.Context, req *pb.ListTelemetryRequest) (*pb.ListTelemetryResponse, error) {
-	records, err := s.DB.ListBySensorID(ctx, int(req.SensorId), int(req.Limit))
+	records, err := s.DB.ListByDeviceID(ctx, int(req.DeviceId), int(req.Limit))
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "list telemetry: %v", err)
 	}
@@ -64,17 +64,17 @@ func (s *TelemetryServiceServer) ListTelemetry(ctx context.Context, req *pb.List
 }
 
 func (s *TelemetryServiceServer) CollectFromSensor(ctx context.Context, req *pb.CollectFromSensorRequest) (*pb.TelemetryResponse, error) {
-	tempResp, err := s.TempClient.GetByID(fmt.Sprintf("%d", req.SensorId))
+	tempResp, err := s.TempClient.GetByID(fmt.Sprintf("%d", req.DeviceId))
 	if err != nil {
 		s.Broker.Publish(ctx, "telemetry.no_data", map[string]interface{}{
-			"device_id": req.SensorId,
-			"location":  req.Location,
+			"device_id": req.DeviceId,
+			"room_name": req.RoomName,
 		})
 		return nil, status.Errorf(codes.Unavailable, "temperature fetch failed: %v", err)
 	}
 
 	record, err := s.DB.SaveTelemetry(ctx, models.TelemetryCreate{
-		SensorID: int(req.SensorId),
+		DeviceID: int(req.DeviceId),
 		Value:    tempResp.Value,
 		Unit:     tempResp.Unit,
 	})
@@ -83,11 +83,11 @@ func (s *TelemetryServiceServer) CollectFromSensor(ctx context.Context, req *pb.
 	}
 
 	s.Broker.Publish(ctx, "telemetry.updated", map[string]interface{}{
-		"device_id": req.SensorId,
+		"device_id": req.DeviceId,
 		"value":     record.Value,
 		"unit":      record.Unit,
 	})
-	log.Printf("collected telemetry for sensor %d: %.2f %s", req.SensorId, record.Value, record.Unit)
+	log.Printf("collected telemetry for device %d: %.2f %s", req.DeviceId, record.Value, record.Unit)
 
 	return telemetryToProto(record), nil
 }
@@ -102,7 +102,7 @@ func (s *TelemetryServiceServer) HandleDeviceEvent(event broker.Event) {
 
 	switch event.Type {
 	case "device.deleted":
-		if err := s.DB.DeleteBySensorID(ctx, int(deviceID)); err != nil {
+		if err := s.DB.DeleteByDeviceID(ctx, int(deviceID)); err != nil {
 			log.Printf("delete telemetry for device %d: %v", int(deviceID), err)
 		} else {
 			log.Printf("deleted telemetry records for device %d", int(deviceID))
@@ -115,7 +115,7 @@ func (s *TelemetryServiceServer) HandleDeviceEvent(event broker.Event) {
 func telemetryToProto(r models.TelemetryRecord) *pb.TelemetryResponse {
 	return &pb.TelemetryResponse{
 		Id:        int32(r.ID),
-		SensorId:  int32(r.SensorID),
+		DeviceId:  int32(r.DeviceID),
 		Value:     r.Value,
 		Unit:      r.Unit,
 		CreatedAt: timestamppb.New(r.CreatedAt),

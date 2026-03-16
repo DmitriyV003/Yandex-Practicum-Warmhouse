@@ -22,10 +22,10 @@ type DeviceServiceServer struct {
 
 func (s *DeviceServiceServer) CreateDevice(ctx context.Context, req *pb.CreateDeviceRequest) (*pb.DeviceResponse, error) {
 	device, err := s.DB.CreateDevice(ctx, models.DeviceCreate{
-		Name:     req.Name,
-		Type:     req.Type,
-		Unit:     req.Unit,
-		Location: req.Location,
+		Name:   req.Name,
+		Type:   req.Type,
+		Unit:   req.Unit,
+		RoomID: int(req.RoomId),
 	})
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "create device: %v", err)
@@ -35,7 +35,7 @@ func (s *DeviceServiceServer) CreateDevice(ctx context.Context, req *pb.CreateDe
 		"device_id": device.ID,
 		"name":      device.Name,
 		"type":      device.Type,
-		"location":  device.Location,
+		"room_id":   device.RoomID,
 	})
 	log.Printf("device created: id=%d name=%s", device.ID, device.Name)
 
@@ -51,7 +51,7 @@ func (s *DeviceServiceServer) GetDevice(ctx context.Context, req *pb.GetDeviceRe
 }
 
 func (s *DeviceServiceServer) ListDevices(ctx context.Context, req *pb.ListDevicesRequest) (*pb.ListDevicesResponse, error) {
-	devices, err := s.DB.ListDevices(ctx, req.Status, req.Location)
+	devices, err := s.DB.ListDevices(ctx, req.Status, int(req.RoomId))
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "list devices: %v", err)
 	}
@@ -119,7 +119,8 @@ func deviceToProto(d models.Device) *pb.DeviceResponse {
 		Type:      d.Type,
 		Unit:      d.Unit,
 		Status:    d.Status,
-		Location:  d.Location,
+		RoomId:    int32(d.RoomID),
+		RoomName:  d.RoomName,
 		CreatedAt: timestamppb.New(d.CreatedAt),
 		UpdatedAt: timestamppb.New(d.UpdatedAt),
 	}
