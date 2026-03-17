@@ -1,0 +1,17 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+
+title System Context Diagram - Warmhouse
+
+Person(customer, "Customer", "Пользователь системы")
+Person(admin, "Admin", "Сотрудник компании")
+
+System(warmhouse, "Warmhouse", "Позволяет юзерам управлять отоплением")
+
+System_Ext(temperature_service, "Temperature Service", "Показывает данные о температуре")
+
+Rel(customer, warmhouse, "Управление/мониторинг устройств в доме")
+Rel(admin, warmhouse, "Установить устройство")
+Rel(warmhouse, temperature_service, "Получает данные о температуре", "HTTPS/JSON")
+
+@enduml

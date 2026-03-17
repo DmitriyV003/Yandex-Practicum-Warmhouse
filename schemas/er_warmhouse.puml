@@ -1,0 +1,76 @@
+@startuml
+title ER Diagram - Warmhouse
+
+entity "User" as usr {
+    * id : int <<PK>>
+    --
+    * name : varchar
+    * email : varchar
+    * password_hash : varchar
+    * created_at : timestamp
+}
+
+entity "House" as house {
+    * id : int <<PK>>
+    --
+    * name : varchar
+    * address : varchar
+    * owner_id : int <<FK>>
+    * created_at : timestamp
+}
+
+entity "Room" as room {
+    * id : int <<PK>>
+    --
+    * name : varchar
+    * house_id : int <<FK>>
+}
+
+entity "Device" as dev {
+    * id : int <<PK>>
+    --
+    * name : varchar
+    * type : varchar
+    * unit : varchar
+    * status : varchar
+    * room_id : int <<FK>>
+    * created_at : timestamp
+    * updated_at : timestamp
+}
+
+entity "TelemetryRecord" as tel {
+    * id : int <<PK>>
+    --
+    * device_id : int <<FK>>
+    * value : float
+    * unit : varchar
+    * created_at : timestamp
+}
+
+entity "Scenario" as scn {
+    * id : int <<PK>>
+    --
+    * name : varchar
+    * house_id : int <<FK>>
+    * is_active : boolean
+    * created_at : timestamp
+}
+
+entity "ScenarioAction" as act {
+    * id : int <<PK>>
+    --
+    * scenario_id : int <<FK>>
+    * device_id : int <<FK>>
+    * action : varchar
+    * value : varchar
+}
+
+usr ||--o{ house : "владеет"
+house ||--o{ room : "содержит"
+room ||--o{ dev : "содержит"
+dev ||--o{ tel : "генерирует"
+house ||--o{ scn : "имеет"
+scn ||--o{ act : "содержит"
+dev ||--o{ act : "выполняет"
+
+@enduml

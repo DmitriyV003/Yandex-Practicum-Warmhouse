@@ -1,0 +1,295 @@
+basePath: /api/v1
+definitions:
+  models.Sensor:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: integer
+      last_updated:
+        type: string
+      location:
+        type: string
+      name:
+        type: string
+      status:
+        type: string
+      type:
+        $ref: '#/definitions/models.SensorType'
+      unit:
+        type: string
+      value:
+        type: number
+    type: object
+  models.SensorCreate:
+    properties:
+      location:
+        type: string
+      name:
+        type: string
+      type:
+        $ref: '#/definitions/models.SensorType'
+      unit:
+        type: string
+    required:
+    - location
+    - name
+    - type
+    type: object
+  models.SensorType:
+    enum:
+    - temperature
+    type: string
+    x-enum-varnames:
+    - Temperature
+  models.SensorUpdate:
+    properties:
+      location:
+        type: string
+      name:
+        type: string
+      status:
+        type: string
+      type:
+        $ref: '#/definitions/models.SensorType'
+      unit:
+        type: string
+      value:
+        type: number
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: API для управления датчиками умного дома
+  title: Smart Home API
+  version: "1.0"
+paths:
+  /sensors:
+    get:
+      description: Возвращает список всех датчиков с актуальными данными температуры
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Sensor'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Получить все датчики
+      tags:
+      - sensors
+    post:
+      consumes:
+      - application/json
+      description: Создает новый датчик и зеркалирует в device-service
+      parameters:
+      - description: Данные датчика
+        in: body
+        name: sensor
+        required: true
+        schema:
+          $ref: '#/definitions/models.SensorCreate'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.Sensor'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Создать датчик
+      tags:
+      - sensors
+  /sensors/{id}:
+    delete:
+      description: Удаляет датчик и зеркалирует удаление в device-service
+      parameters:
+      - description: ID датчика
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Удалить датчик
+      tags:
+      - sensors
+    get:
+      description: Возвращает датчик с актуальными данными температуры
+      parameters:
+      - description: ID датчика
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Sensor'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Получить датчик по ID
+      tags:
+      - sensors
+    put:
+      consumes:
+      - application/json
+      description: Обновляет данные существующего датчика
+      parameters:
+      - description: ID датчика
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Данные для обновления
+        in: body
+        name: sensor
+        required: true
+        schema:
+          $ref: '#/definitions/models.SensorUpdate'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Sensor'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Обновить датчик
+      tags:
+      - sensors
+  /sensors/{id}/value:
+    patch:
+      consumes:
+      - application/json
+      description: Обновляет текущее значение и статус датчика
+      parameters:
+      - description: ID датчика
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Значение и статус
+        in: body
+        name: value
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Обновить значение датчика
+      tags:
+      - sensors
+  /sensors/temperature/{location}:
+    get:
+      description: Возвращает текущую температуру для указанной локации
+      parameters:
+      - description: Название локации (Living Room, Bedroom, Kitchen)
+        in: path
+        name: location
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Получить температуру по локации
+      tags:
+      - temperature
+swagger: "2.0"

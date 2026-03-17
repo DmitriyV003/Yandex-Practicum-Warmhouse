@@ -1,0 +1,337 @@
+{
+    "info": {
+        "_postman_id": "a1b2c3d4-5678-90ab-cdef-warmhouse001",
+        "name": "Warmhouse API",
+        "description": "REST API монолита Warmhouse.\n\nСервер: http://localhost:8080\nSwagger UI: http://localhost:8080/swagger/index.html",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+        {
+            "name": "Health",
+            "item": [
+                {
+                    "name": "Health Check",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/health",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["health"]
+                        },
+                        "description": "Проверка работоспособности API"
+                    },
+                    "response": [
+                        {
+                            "name": "200 OK",
+                            "status": "OK",
+                            "code": 200,
+                            "header": [{"key": "Content-Type", "value": "application/json"}],
+                            "body": "{\n    \"status\": \"ok\"\n}"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Sensors",
+            "item": [
+                {
+                    "name": "Create Sensor - Living Room",
+                    "request": {
+                        "method": "POST",
+                        "header": [{"key": "Content-Type", "value": "application/json"}],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"name\": \"Living Room Temperature\",\n    \"type\": \"temperature\",\n    \"location\": \"Living Room\",\n    \"unit\": \"°C\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/sensors",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["api", "v1", "sensors"]
+                        },
+                        "description": "Создать датчик температуры для гостиной. Зеркалируется в device-service через gRPC."
+                    },
+                    "response": [
+                        {
+                            "name": "201 Created",
+                            "status": "Created",
+                            "code": 201,
+                            "header": [{"key": "Content-Type", "value": "application/json"}],
+                            "body": "{\n    \"id\": 1,\n    \"name\": \"Living Room Temperature\",\n    \"type\": \"temperature\",\n    \"location\": \"Living Room\",\n    \"value\": 0,\n    \"unit\": \"°C\",\n    \"status\": \"inactive\",\n    \"last_updated\": \"2026-02-26T10:00:00Z\",\n    \"created_at\": \"2026-02-26T10:00:00Z\"\n}"
+                        },
+                        {
+                            "name": "400 Bad Request - missing fields",
+                            "status": "Bad Request",
+                            "code": 400,
+                            "header": [{"key": "Content-Type", "value": "application/json"}],
+                            "body": "{\n    \"error\": \"Key: 'SensorCreate.Name' Error:Field validation for 'Name' failed on the 'required' tag\"\n}"
+                        }
+                    ]
+                },
+                {
+                    "name": "Create Sensor - Bedroom",
+                    "request": {
+                        "method": "POST",
+                        "header": [{"key": "Content-Type", "value": "application/json"}],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"name\": \"Bedroom Temperature\",\n    \"type\": \"temperature\",\n    \"location\": \"Bedroom\",\n    \"unit\": \"°C\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/sensors",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["api", "v1", "sensors"]
+                        },
+                        "description": "Создать датчик температуры для спальни"
+                    },
+                    "response": [
+                        {
+                            "name": "201 Created",
+                            "status": "Created",
+                            "code": 201,
+                            "header": [{"key": "Content-Type", "value": "application/json"}],
+                            "body": "{\n    \"id\": 2,\n    \"name\": \"Bedroom Temperature\",\n    \"type\": \"temperature\",\n    \"location\": \"Bedroom\",\n    \"value\": 0,\n    \"unit\": \"°C\",\n    \"status\": \"inactive\",\n    \"last_updated\": \"2026-02-26T10:00:00Z\",\n    \"created_at\": \"2026-02-26T10:00:00Z\"\n}"
+                        }
+                    ]
+                },
+                {
+                    "name": "Create Sensor - Kitchen",
+                    "request": {
+                        "method": "POST",
+                        "header": [{"key": "Content-Type", "value": "application/json"}],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"name\": \"Kitchen Temperature\",\n    \"type\": \"temperature\",\n    \"location\": \"Kitchen\",\n    \"unit\": \"°C\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/sensors",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["api", "v1", "sensors"]
+                        },
+                        "description": "Создать датчик температуры для кухни"
+                    },
+                    "response": [
+                        {
+                            "name": "201 Created",
+                            "status": "Created",
+                            "code": 201,
+                            "header": [{"key": "Content-Type", "value": "application/json"}],
+                            "body": "{\n    \"id\": 3,\n    \"name\": \"Kitchen Temperature\",\n    \"type\": \"temperature\",\n    \"location\": \"Kitchen\",\n    \"value\": 0,\n    \"unit\": \"°C\",\n    \"status\": \"inactive\",\n    \"last_updated\": \"2026-02-26T10:00:00Z\",\n    \"created_at\": \"2026-02-26T10:00:00Z\"\n}"
+                        }
+                    ]
+                },
+                {
+                    "name": "Get All Sensors",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/sensors",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["api", "v1", "sensors"]
+                        },
+                        "description": "Получить все датчики. Температурные датчики обогащаются актуальными показаниями через telemetry-service."
+                    },
+                    "response": [
+                        {
+                            "name": "200 OK",
+                            "status": "OK",
+                            "code": 200,
+                            "header": [{"key": "Content-Type", "value": "application/json"}],
+                            "body": "[\n    {\n        \"id\": 1,\n        \"name\": \"Living Room Temperature\",\n        \"type\": \"temperature\",\n        \"location\": \"Living Room\",\n        \"value\": 23.45,\n        \"unit\": \"°C\",\n        \"status\": \"active\",\n        \"last_updated\": \"2026-02-26T12:00:00Z\",\n        \"created_at\": \"2026-02-26T10:00:00Z\"\n    },\n    {\n        \"id\": 2,\n        \"name\": \"Bedroom Temperature\",\n        \"type\": \"temperature\",\n        \"location\": \"Bedroom\",\n        \"value\": 21.30,\n        \"unit\": \"°C\",\n        \"status\": \"active\",\n        \"last_updated\": \"2026-02-26T12:00:00Z\",\n        \"created_at\": \"2026-02-26T10:00:00Z\"\n    },\n    {\n        \"id\": 3,\n        \"name\": \"Kitchen Temperature\",\n        \"type\": \"temperature\",\n        \"location\": \"Kitchen\",\n        \"value\": 25.10,\n        \"unit\": \"°C\",\n        \"status\": \"active\",\n        \"last_updated\": \"2026-02-26T12:00:00Z\",\n        \"created_at\": \"2026-02-26T10:00:00Z\"\n    }\n]"
+                        }
+                    ]
+                },
+                {
+                    "name": "Get Sensor by ID",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/sensors/1",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["api", "v1", "sensors", "1"]
+                        },
+                        "description": "Получить датчик по ID с актуальными показаниями"
+                    },
+                    "response": [
+                        {
+                            "name": "200 OK",
+                            "status": "OK",
+                            "code": 200,
+                            "header": [{"key": "Content-Type", "value": "application/json"}],
+                            "body": "{\n    \"id\": 1,\n    \"name\": \"Living Room Temperature\",\n    \"type\": \"temperature\",\n    \"location\": \"Living Room\",\n    \"value\": 23.45,\n    \"unit\": \"°C\",\n    \"status\": \"active\",\n    \"last_updated\": \"2026-02-26T12:00:00Z\",\n    \"created_at\": \"2026-02-26T10:00:00Z\"\n}"
+                        },
+                        {
+                            "name": "404 Not Found",
+                            "status": "Not Found",
+                            "code": 404,
+                            "header": [{"key": "Content-Type", "value": "application/json"}],
+                            "body": "{\n    \"error\": \"Sensor not found\"\n}"
+                        }
+                    ]
+                },
+                {
+                    "name": "Update Sensor",
+                    "request": {
+                        "method": "PUT",
+                        "header": [{"key": "Content-Type", "value": "application/json"}],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"name\": \"Updated Living Room Sensor\",\n    \"location\": \"Living Room\",\n    \"unit\": \"°F\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/sensors/1",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["api", "v1", "sensors", "1"]
+                        },
+                        "description": "Обновить данные датчика"
+                    },
+                    "response": [
+                        {
+                            "name": "200 OK",
+                            "status": "OK",
+                            "code": 200,
+                            "header": [{"key": "Content-Type", "value": "application/json"}],
+                            "body": "{\n    \"id\": 1,\n    \"name\": \"Updated Living Room Sensor\",\n    \"type\": \"temperature\",\n    \"location\": \"Living Room\",\n    \"value\": 0,\n    \"unit\": \"°F\",\n    \"status\": \"inactive\",\n    \"last_updated\": \"2026-02-26T12:30:00Z\",\n    \"created_at\": \"2026-02-26T10:00:00Z\"\n}"
+                        }
+                    ]
+                },
+                {
+                    "name": "Update Sensor Value",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [{"key": "Content-Type", "value": "application/json"}],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"value\": 22.5,\n    \"status\": \"active\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/sensors/1/value",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["api", "v1", "sensors", "1", "value"]
+                        },
+                        "description": "Обновить текущее значение и статус датчика"
+                    },
+                    "response": [
+                        {
+                            "name": "200 OK",
+                            "status": "OK",
+                            "code": 200,
+                            "header": [{"key": "Content-Type", "value": "application/json"}],
+                            "body": "{\n    \"message\": \"Sensor value updated successfully\"\n}"
+                        }
+                    ]
+                },
+                {
+                    "name": "Delete Sensor",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/sensors/1",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["api", "v1", "sensors", "1"]
+                        },
+                        "description": "Удалить датчик. Зеркалируется в device-service через gRPC."
+                    },
+                    "response": [
+                        {
+                            "name": "200 OK",
+                            "status": "OK",
+                            "code": 200,
+                            "header": [{"key": "Content-Type", "value": "application/json"}],
+                            "body": "{\n    \"message\": \"Sensor deleted successfully\"\n}"
+                        },
+                        {
+                            "name": "500 Not Found",
+                            "status": "Internal Server Error",
+                            "code": 500,
+                            "header": [{"key": "Content-Type", "value": "application/json"}],
+                            "body": "{\n    \"error\": \"sensor not found\"\n}"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Temperature",
+            "item": [
+                {
+                    "name": "Get Temperature - Living Room",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/sensors/temperature/Living Room",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["api", "v1", "sensors", "temperature", "Living Room"]
+                        },
+                        "description": "Получить температуру в гостиной"
+                    },
+                    "response": [
+                        {
+                            "name": "200 OK",
+                            "status": "OK",
+                            "code": 200,
+                            "header": [{"key": "Content-Type", "value": "application/json"}],
+                            "body": "{\n    \"location\": \"Living Room\",\n    \"value\": 23.45,\n    \"unit\": \"°C\",\n    \"status\": \"active\",\n    \"timestamp\": \"2026-02-26T12:00:00Z\",\n    \"description\": \"Temperature in Living Room\"\n}"
+                        }
+                    ]
+                },
+                {
+                    "name": "Get Temperature - Bedroom",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/sensors/temperature/Bedroom",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["api", "v1", "sensors", "temperature", "Bedroom"]
+                        },
+                        "description": "Получить температуру в спальне"
+                    },
+                    "response": [
+                        {
+                            "name": "200 OK",
+                            "status": "OK",
+                            "code": 200,
+                            "header": [{"key": "Content-Type", "value": "application/json"}],
+                            "body": "{\n    \"location\": \"Bedroom\",\n    \"value\": 21.30,\n    \"unit\": \"°C\",\n    \"status\": \"active\",\n    \"timestamp\": \"2026-02-26T12:00:00Z\",\n    \"description\": \"Temperature in Bedroom\"\n}"
+                        }
+                    ]
+                },
+                {
+                    "name": "Get Temperature - Kitchen",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/sensors/temperature/Kitchen",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["api", "v1", "sensors", "temperature", "Kitchen"]
+                        },
+                        "description": "Получить температуру на кухне"
+                    },
+                    "response": [
+                        {
+                            "name": "200 OK",
+                            "status": "OK",
+                            "code": 200,
+                            "header": [{"key": "Content-Type", "value": "application/json"}],
+                            "body": "{\n    \"location\": \"Kitchen\",\n    \"value\": 25.10,\n    \"unit\": \"°C\",\n    \"status\": \"active\",\n    \"timestamp\": \"2026-02-26T12:00:00Z\",\n    \"description\": \"Temperature in Kitchen\"\n}"
+                        }
+                    ]
+                }
+            ]
+        }
+    ],
+    "variable": [
+        {
+            "key": "baseUrl",
+            "value": "http://localhost:8080",
+            "type": "string"
+        }
+    ]
+}

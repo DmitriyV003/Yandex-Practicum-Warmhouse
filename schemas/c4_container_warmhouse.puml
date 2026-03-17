@@ -1,0 +1,32 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+title Container Diagram - Warmhouse
+
+Person(customer, "User", "User")
+Person(admin, "Admin", "System Admin")
+
+System_Boundary(warmhouse, "Warmhouse") {
+    Container(api_gateway, "API Gateway", "Golang", "Маршрутизация запросов")
+    Container(device_service, "Device Service", "Golang", "Управление устройствами")
+    Container(telemetry_service, "Telemetry Service", "Golang", "Управление телеметрией")
+    ContainerDb(device_db, "Device DB", "PostgreSQL", "Данные устройств")
+    ContainerDb(telemetry_db, "Telemetry DB", "PostgreSQL", "Данные телеметрии")
+    ContainerQueue(broker, "Message Broker", "RabbitMQ", "Асинхронный обмен")
+}
+
+System_Ext(temperature_service, "Temperature Service", "Сервис данных температуры")
+
+Rel(device_service, broker, "Publish device.created/deleted", "AMQP")
+Rel(telemetry_service, broker, "Publish telemetry.updated/no_data", "AMQP")
+Rel(broker, telemetry_service, "Consume device.created/deleted", "AMQP")
+Rel(broker, device_service, "Consume telemetry.updated/no_data", "AMQP")
+Rel(customer, api_gateway, "REST API", "HTTPS/JSON")
+Rel(admin, api_gateway, "REST API", "HTTPS/JSON")
+Rel(api_gateway, device_service, "Вызов", "GRPC")
+Rel(api_gateway, telemetry_service, "Вызов", "GRPC")
+Rel(device_service, device_db, "Читает/пишет", "SQL")
+Rel(telemetry_service, telemetry_db, "Читает/пишет", "SQL")
+Rel(telemetry_service, temperature_service, "Получает температуру", "HTTPS/JSON")
+
+@enduml
